@@ -7,14 +7,17 @@ A small script to convert video to text using ASR (Automatic Speech Recognition)
 - Transcribe local video/audio files
 - Transcribe YouTube videos (by URL or video ID)
 - Auto-detects input type (file, URL, or YouTube ID)
-- Multiple ASR backends: OpenAI Whisper, NVIDIA Canary-Qwen-2.5B
+- Displays media info (duration, resolution, frame count) when available
+- Multiple ASR backends: OpenAI Whisper (CPU), NVIDIA Canary-Qwen-2.5B (GPU)
+- Caches downloaded audio and transcripts for instant repeat lookups
+- Transcript goes to stdout, diagnostics to stderr (pipe-friendly)
 - Self-contained with `uv` for dependency management
 
 ## Installation
 
 ```bash
 # Install uv if needed
-pip install uv
+cargo install uv  # or: pip install uv
 
 # The script manages its own dependencies via uv script metadata
 ```
@@ -23,48 +26,62 @@ pip install uv
 
 ```bash
 # Check required external tools (ffmpeg, lame)
-uv run videototext.py --check
+videototext.py --check
 
 # Transcribe a local video file
-uv run videototext.py video.mp4
+videototext.py video.mp4
 
 # Save transcription to file
-uv run videototext.py video.mp4 -o transcript.txt
+videototext.py video.mp4 -o transcript.txt
+
+# Pipe-friendly: only the transcript goes to stdout
+videototext.py video.mp4 > transcript.txt
 
 # Use a different Whisper model (tiny, base, small, medium, large)
-uv run videototext.py video.mp4 --model small
+videototext.py video.mp4 --model small
 
 # Transcribe a YouTube video by URL
-uv run videototext.py "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+videototext.py "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 
 # Transcribe by YouTube video ID
-uv run videototext.py dQw4w9WgXcQ
+videototext.py dQw4w9WgXcQ
 
-# Use NVIDIA Canary-Qwen-2.5B backend
-uv run videototext.py video.mp4 --backend canary
+# Use NVIDIA Canary-Qwen-2.5B backend (requires NVIDIA GPU)
+uv run --with 'nemo_toolkit[asr]' videototext.py video.mp4 --backend canary
+
+# Bypass cache for a fresh transcription
+videototext.py video.mp4 --no-cache
 ```
 
 ## ASR Backends
 
 ### Whisper (default)
 
-OpenAI's Whisper model. Installed on first use if missing.
+OpenAI's Whisper model, running on CPU. Installed automatically on first use.
 
 ```bash
-uv run videototext.py video.mp4 --backend whisper --model large
+videototext.py video.mp4 --backend whisper --model large
 ```
 
 Models are stored in `$XDG_DATA_HOME/videototext/whisper/` (defaults to `~/.local/share/videototext/whisper/`).
 
 ### NVIDIA Canary-Qwen-2.5B
 
-NVIDIA's 2.5B parameter speech recognition model via NeMo toolkit. Requires NVIDIA GPU.
+NVIDIA's 2.5B parameter speech recognition model via NeMo toolkit. Requires an NVIDIA GPU. The `nemo_toolkit` dependency is not installed by default — pass it via `--with`:
 
 ```bash
-uv run videototext.py video.mp4 --backend canary
+uv run --with 'nemo_toolkit[asr]' videototext.py video.mp4 --backend canary
 ```
 
-Requires NeMo toolkit — the script will offer to install it if missing.
+## Caching
+
+Downloaded audio (for URLs) and transcripts are cached in `$XDG_CACHE_HOME/videototext/` (defaults to `~/.cache/videototext/`).
+
+- **URLs**: keyed by URL — same URL hits cache instantly
+- **Local files**: keyed by path + modification time + size — cache invalidates on edit
+- **Transcripts**: keyed by source + backend + model — different models get separate entries
+
+Use `--no-cache` to bypass.
 
 ## Dependencies
 
@@ -77,7 +94,8 @@ Python dependencies (auto-installed by uv):
 - `rich` - terminal output
 - `yt-dlp` - YouTube video download
 - `ffmpeg-python` - audio extraction
+- `openai-whisper` - Whisper ASR backend
+- `torch` / `torchaudio` - (CPU-only by default)
 
 Optional (installed on demand):
-- `openai-whisper` - Whisper ASR backend
 - `nemo_toolkit[asr]` - NVIDIA Canary-Qwen backend
