@@ -235,7 +235,7 @@ def cli(input_source, model, output, no_cache, clear_cache, check):
         return
 
     if check:
-        tools = {"ffmpeg": shutil.which("ffmpeg"), "lame": shutil.which("lame")}
+        tools = {"ffmpeg": shutil.which("ffmpeg")}
         console.print("\n[bold]External Tools[/bold]")
         for tool, path in tools.items():
             status = "[green]✓[/green]" if path else "[red]✗[/red]"

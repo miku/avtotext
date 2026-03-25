@@ -36,17 +36,14 @@ cp videototext.py ~/.local/bin/
 chmod +x ~/.local/bin/videototext.py
 ```
 
-That's it. No virtualenvs, no `pip install`, no setup.py. On first run, `uv`
-resolves and caches the dependencies automatically.
-
-A `.deb`/`.rpm` package is also available (see `make deb` / `make rpm`).
+That's it. No virtualenvs, no `pip install`, etc, using [uv script](https://docs.astral.sh/uv/guides/scripts/#declaring-script-dependencies)
 
 ## Usage
 
 ### CPU (Whisper)
 
 ```bash
-# Check required external tools (ffmpeg, lame)
+# Check required external tools
 videototext.py --check
 
 # Transcribe a local video file
@@ -68,7 +65,7 @@ videototext.py "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 videototext.py dQw4w9WgXcQ
 ```
 
-### GPU (NVIDIA NeMo)
+### GPU (NVIDIA [NeMo](https://docs.nvidia.com/nemo-framework/user-guide/latest/nemotoolkit/asr/intro.html))
 
 ```bash
 # List available models
@@ -112,8 +109,7 @@ Use `--no-cache` to bypass, `--clear-cache` to remove all cached data.
 ## Dependencies
 
 External tools (checked via `--check`):
-- `ffmpeg` - for audio extraction
-- `lame` - for MP3 encoding
+- `ffmpeg` - for audio extraction and normalization
 - `nvidia-smi` - GPU script only
 
 Python dependencies are auto-installed by uv on first run. Whisper models are stored in `$XDG_DATA_HOME/videototext/whisper/` (defaults to `~/.local/share/videototext/whisper/`).

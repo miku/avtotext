@@ -362,7 +362,6 @@ def cli(input_source, model_name, lang, target_lang, output, no_cache, clear_cac
     if check:
         tools = {
             "ffmpeg": shutil.which("ffmpeg"),
-            "lame": shutil.which("lame"),
             "nvidia-smi": shutil.which("nvidia-smi"),
         }
         console.print("\n[bold]External Tools[/bold]")
