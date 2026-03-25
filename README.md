@@ -81,7 +81,7 @@ Downloaded audio (for URLs) and transcripts are cached in `$XDG_CACHE_HOME/video
 - **Local files**: keyed by path + modification time + size — cache invalidates on edit
 - **Transcripts**: keyed by source + backend + model — different models get separate entries
 
-Use `--no-cache` to bypass.
+Use `--no-cache` to bypass, `--clear-cache` to remove all cached data.
 
 ## Dependencies
 

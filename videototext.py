@@ -248,13 +248,20 @@ def transcribe_with_canary(audio_path: str) -> str:
 )
 @click.option("--output", "-o", type=click.Path(), help="Output text file")
 @click.option("--no-cache", is_flag=True, help="Bypass cache")
+@click.option("--clear-cache", is_flag=True, help="Remove all cached audio and transcripts")
 @click.option("--check", is_flag=True, help="Check for required external tools")
 @click.version_option(version="0.2.0")
-def cli(input_source, backend, model, output, no_cache, check):
+def cli(input_source, backend, model, output, no_cache, clear_cache, check):
     """Convert video/audio to text.
 
     INPUT_SOURCE can be a local file path, a URL, or a YouTube video ID.
     """
+    if clear_cache:
+        cache_dir = get_cache_dir()
+        shutil.rmtree(cache_dir, ignore_errors=True)
+        console.print("[green]Cache cleared.[/green]")
+        return
+
     if check:
         tools = {"ffmpeg": shutil.which("ffmpeg"), "lame": shutil.which("lame")}
         console.print("\n[bold]External Tools[/bold]")
