@@ -11,7 +11,7 @@
 # ///
 
 """
-videototext-gpu.py - Convert video/audio to text using NVIDIA Canary-Qwen-2.5B.
+videototext-gpu.py - Convert video/audio to text using NVIDIA NeMo ASR models.
 
 Usage:
     videototext-gpu.py <input> [options]
@@ -46,13 +46,30 @@ import ffmpeg
 
 console = Console(stderr=True)
 
+CHUNK_SECONDS = 30
 
-def get_data_dir() -> Path:
-    """Get XDG-compliant data directory for videototext."""
-    xdg = os.environ.get("XDG_DATA_HOME", os.path.expanduser("~/.local/share"))
-    data_dir = Path(xdg) / "videototext"
-    data_dir.mkdir(parents=True, exist_ok=True)
-    return data_dir
+MODELS = {
+    "canary-qwen-2.5b": {
+        "pretrained": "nvidia/canary-qwen-2.5b",
+        "api": "salm",
+        "multilingual": True,
+        "description": "2.5B speech-language model, highest quality",
+    },
+    "canary-1b-v2": {
+        "pretrained": "nvidia/canary-1b-v2",
+        "api": "asr",
+        "multilingual": True,
+        "description": "1B multilingual (25 languages), translation support",
+    },
+    "parakeet-0.6b": {
+        "pretrained": "nvidia/parakeet-tdt-0.6b-v2",
+        "api": "asr",
+        "multilingual": False,
+        "description": "600M English-only, fast and lightweight",
+    },
+}
+
+DEFAULT_MODEL = "canary-1b-v2"
 
 
 def get_cache_dir() -> Path:
@@ -74,9 +91,9 @@ def source_key(input_source: str, input_type: str) -> str:
         return hashlib.sha256(raw.encode()).hexdigest()[:16]
 
 
-def transcript_key(src_key: str, backend: str, model: str) -> str:
-    """Compute a cache key for a transcript (source + backend + model)."""
-    raw = f"{src_key}:{backend}:{model}"
+def transcript_key(src_key: str, model_name: str, lang: str, target_lang: str) -> str:
+    """Compute a cache key for a transcript."""
+    raw = f"{src_key}:{model_name}:{lang}:{target_lang}"
     return hashlib.sha256(raw.encode()).hexdigest()[:16]
 
 
@@ -86,7 +103,6 @@ def detect_input_type(input_str: str) -> str:
         return "file"
     if re.match(r"^https?://", input_str):
         return "url"
-    # YouTube video IDs are 11 characters: alphanumeric, dash, underscore
     if re.match(r"^[A-Za-z0-9_-]{11}$", input_str):
         return "youtube_id"
     console.print(
@@ -200,9 +216,6 @@ def extract_audio(input_path: str, output_path: str) -> str:
         return normalize_audio(input_path, output_path)
 
 
-CHUNK_SECONDS = 30
-
-
 def get_audio_duration(audio_path: str) -> float:
     """Get audio duration in seconds via ffprobe."""
     probe = ffmpeg.probe(audio_path)
@@ -224,30 +237,57 @@ def split_audio(audio_path: str, chunk_dir: str, chunk_sec: int = CHUNK_SECONDS)
     return chunks
 
 
-def transcribe(audio_path: str) -> str:
-    """Transcribe audio using NVIDIA Canary-Qwen-2.5B, chunking long files."""
-    from nemo.collections.speechlm2.models import SALM
+def _transcribe_salm_chunk(model, audio_path: str) -> str:
+    """Transcribe a single chunk with a SALM model."""
+    answer_ids = model.generate(
+        prompts=[
+            [
+                {
+                    "role": "user",
+                    "content": f"Transcribe the following: {model.audio_locator_tag}",
+                    "audio": [audio_path],
+                }
+            ]
+        ],
+        max_new_tokens=1024,
+    )
+    return model.tokenizer.ids_to_text(answer_ids[0].cpu())
 
-    console.print("[dim]Loading Canary-Qwen-2.5B model...[/dim]")
-    model = SALM.from_pretrained("nvidia/canary-qwen-2.5b")
-    model = model.cuda().eval()
+
+def _transcribe_asr_chunk(model, audio_path: str, lang: str, target_lang: str, multilingual: bool) -> str:
+    """Transcribe a single chunk with an ASRModel."""
+    kwargs = {}
+    if multilingual:
+        kwargs["source_lang"] = lang
+        kwargs["target_lang"] = target_lang
+    output = model.transcribe([audio_path], batch_size=1, **kwargs)
+    result = output[0]
+    return result.text if hasattr(result, "text") else str(result)
+
+
+def transcribe(audio_path: str, model_name: str, lang: str, target_lang: str) -> str:
+    """Transcribe audio, chunking long files. Dispatches to the right API."""
+    model_cfg = MODELS[model_name]
+    api = model_cfg["api"]
+    multilingual = model_cfg["multilingual"]
+
+    console.print(f"[dim]Loading model:[/dim] {model_cfg['pretrained']}")
+
+    if api == "salm":
+        from nemo.collections.speechlm2.models import SALM
+        model = SALM.from_pretrained(model_cfg["pretrained"])
+        model = model.cuda().eval()
+        transcribe_chunk = lambda path: _transcribe_salm_chunk(model, path)
+    else:
+        from nemo.collections.asr.models import ASRModel
+        model = ASRModel.from_pretrained(model_name=model_cfg["pretrained"])
+        model = model.cuda().eval()
+        transcribe_chunk = lambda path: _transcribe_asr_chunk(model, path, lang, target_lang, multilingual)
 
     duration = get_audio_duration(audio_path)
     if duration <= CHUNK_SECONDS:
         console.print("[dim]Transcribing...[/dim]")
-        answer_ids = model.generate(
-            prompts=[
-                [
-                    {
-                        "role": "user",
-                        "content": f"Transcribe the following: {model.audio_locator_tag}",
-                        "audio": [audio_path],
-                    }
-                ]
-            ],
-            max_new_tokens=1024,
-        )
-        return model.tokenizer.ids_to_text(answer_ids[0].cpu())
+        return transcribe_chunk(audio_path).strip()
 
     # Long audio: split into chunks
     from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn, TimeRemainingColumn
@@ -266,19 +306,7 @@ def transcribe(audio_path: str) -> str:
         ) as progress:
             task = progress.add_task("Transcribing", total=len(chunks))
             for chunk_path in chunks:
-                answer_ids = model.generate(
-                    prompts=[
-                        [
-                            {
-                                "role": "user",
-                                "content": f"Transcribe the following: {model.audio_locator_tag}",
-                                "audio": [chunk_path],
-                            }
-                        ]
-                    ],
-                    max_new_tokens=1024,
-                )
-                text = model.tokenizer.ids_to_text(answer_ids[0].cpu())
+                text = transcribe_chunk(chunk_path)
                 if text.strip():
                     parts.append(text.strip())
                 progress.advance(task)
@@ -287,19 +315,44 @@ def transcribe(audio_path: str) -> str:
         shutil.rmtree(chunk_dir, ignore_errors=True)
 
 
+def print_models():
+    """Print available models."""
+    console.print("\n[bold]Available models:[/bold]\n")
+    for name, cfg in MODELS.items():
+        default = " [green](default)[/green]" if name == DEFAULT_MODEL else ""
+        lang = "multilingual" if cfg["multilingual"] else "English only"
+        console.print(f"  [bold]{name}[/bold]{default}")
+        console.print(f"    {cfg['description']}")
+        console.print(f"    [dim]{cfg['pretrained']} \u2022 {lang}[/dim]")
+    console.print()
+
+
 @click.command()
 @click.argument("input_source", required=False)
+@click.option(
+    "--model", "model_name",
+    type=click.Choice(list(MODELS.keys())),
+    default=DEFAULT_MODEL,
+    help="ASR model to use",
+)
+@click.option("--lang", default="en", help="Source language code (multilingual models)")
+@click.option("--target-lang", default=None, help="Target language for translation (defaults to --lang)")
 @click.option("--output", "-o", type=click.Path(), help="Output text file")
 @click.option("--no-cache", is_flag=True, help="Bypass cache")
 @click.option("--clear-cache", is_flag=True, help="Remove all cached audio and transcripts")
+@click.option("--list-models", is_flag=True, help="List available models")
 @click.option("--check", is_flag=True, help="Check for required external tools")
-@click.version_option(version="0.2.0")
-def cli(input_source, output, no_cache, clear_cache, check):
-    """Convert video/audio to text using NVIDIA Canary-Qwen-2.5B.
+@click.version_option(version="0.3.0")
+def cli(input_source, model_name, lang, target_lang, output, no_cache, clear_cache, list_models, check):
+    """Convert video/audio to text using NVIDIA NeMo ASR models.
 
     INPUT_SOURCE can be a local file path, a URL, or a YouTube video ID.
     Requires an NVIDIA GPU.
     """
+    if list_models:
+        print_models()
+        return
+
     if clear_cache:
         cache_dir = get_cache_dir()
         shutil.rmtree(cache_dir, ignore_errors=True)
@@ -329,6 +382,15 @@ def cli(input_source, output, no_cache, clear_cache, check):
         console.print("[red]✗ Please provide an input file, URL, or YouTube ID.[/red]")
         raise SystemExit(1)
 
+    if target_lang is None:
+        target_lang = lang
+
+    model_cfg = MODELS[model_name]
+    if not model_cfg["multilingual"] and lang != "en":
+        console.print(f"[yellow]Warning: {model_name} is English-only, ignoring --lang {lang}[/yellow]")
+        lang = "en"
+        target_lang = "en"
+
     input_type = detect_input_type(input_source)
 
     if input_type == "youtube_id":
@@ -341,7 +403,7 @@ def cli(input_source, output, no_cache, clear_cache, check):
 
     cache_dir = get_cache_dir()
     src_key = source_key(input_source, input_type)
-    t_key = transcript_key(src_key, "canary", "canary-qwen-2.5b")
+    t_key = transcript_key(src_key, model_name, lang, target_lang)
 
     # Check transcript cache
     transcript_cache = cache_dir / "transcripts" / f"{t_key}.txt"
@@ -371,7 +433,7 @@ def cli(input_source, output, no_cache, clear_cache, check):
             shutil.copy2(audio_path, audio_cache)
 
     try:
-        text = transcribe(audio_path)
+        text = transcribe(audio_path, model_name, lang, target_lang)
 
         # Cache the transcript
         transcript_cache.parent.mkdir(parents=True, exist_ok=True)

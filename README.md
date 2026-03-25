@@ -7,7 +7,7 @@ Two self-contained scripts — pick the one that fits your hardware:
 | Script | Backend | Hardware | Deps installed |
 |---|---|---|---|
 | `videototext.py` | OpenAI Whisper | CPU | CPU-only torch |
-| `videototext-gpu.py` | NVIDIA Canary-Qwen-2.5B | NVIDIA GPU | CUDA torch + NeMo |
+| `videototext-gpu.py` | NVIDIA NeMo ASR | NVIDIA GPU | CUDA torch + NeMo |
 
 ## Features
 
@@ -15,6 +15,8 @@ Two self-contained scripts — pick the one that fits your hardware:
 - Transcribe YouTube videos (by URL or video ID)
 - Auto-detects input type (file, URL, or YouTube ID)
 - Displays media info (duration, resolution, frame count) when available
+- Multiple GPU models: Canary-Qwen-2.5B, Canary-1B-v2, Parakeet-0.6B
+- Multilingual support and speech translation (Canary models)
 - Caches downloaded audio and transcripts for instant repeat lookups
 - Transcript goes to stdout, diagnostics to stderr (pipe-friendly)
 - Self-contained with `uv` for dependency management
@@ -55,18 +57,36 @@ videototext.py "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 videototext.py dQw4w9WgXcQ
 ```
 
-### GPU (NVIDIA Canary-Qwen-2.5B)
+### GPU (NVIDIA NeMo)
 
 ```bash
-# Check required external tools (ffmpeg, lame, nvidia-smi)
-videototext-gpu.py --check
+# List available models
+videototext-gpu.py --list-models
 
-# Transcribe a local video file
+# Transcribe with default model (canary-1b-v2)
 videototext-gpu.py video.mp4
+
+# Choose a specific model
+videototext-gpu.py video.mp4 --model canary-qwen-2.5b
+videototext-gpu.py video.mp4 --model parakeet-0.6b
+
+# Multilingual: set source language (canary models)
+videototext-gpu.py video.mp4 --lang de
+
+# Translation: transcribe German audio to English text
+videototext-gpu.py video.mp4 --lang de --target-lang en
 
 # Transcribe a YouTube video
 videototext-gpu.py "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 ```
+
+#### Available GPU models
+
+| Model | Size | Languages | Notes |
+|---|---|---|---|
+| `canary-1b-v2` (default) | 1B | 25 languages | Multilingual, translation support |
+| `canary-qwen-2.5b` | 2.5B | multilingual | Highest quality, speech-language model |
+| `parakeet-0.6b` | 600M | English only | Fast and lightweight |
 
 ## Caching
 
@@ -74,7 +94,7 @@ Downloaded audio (for URLs) and transcripts are cached in `$XDG_CACHE_HOME/video
 
 - **URLs**: keyed by URL — same URL hits cache instantly
 - **Local files**: keyed by path + modification time + size — cache invalidates on edit
-- **Transcripts**: keyed by source + backend + model — different backends get separate entries
+- **Transcripts**: keyed by source + model + language — different models/languages get separate entries
 
 Use `--no-cache` to bypass, `--clear-cache` to remove all cached data.
 
