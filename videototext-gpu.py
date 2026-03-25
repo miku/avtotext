@@ -26,7 +26,12 @@ import os
 # Silence NeMo and dependency warnings before any imports
 warnings.filterwarnings("ignore")
 os.environ["NEMO_LOG_LEVEL"] = "ERROR"
+os.environ["TRANSFORMERS_VERBOSITY"] = "error"
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 os.environ.pop("PYTORCH_CUDA_ALLOC_CONF", None)
+import logging
+
+logging.disable(logging.CRITICAL)
 
 import click
 import sys
@@ -221,14 +226,11 @@ def split_audio(audio_path: str, chunk_dir: str, chunk_sec: int = CHUNK_SECONDS)
 
 def transcribe(audio_path: str) -> str:
     """Transcribe audio using NVIDIA Canary-Qwen-2.5B, chunking long files."""
-    import logging
-
-    logging.getLogger("nemo_logger").setLevel(logging.ERROR)
-    logging.getLogger("pytorch_lightning").setLevel(logging.ERROR)
     from nemo.collections.speechlm2.models import SALM
 
     console.print("[dim]Loading Canary-Qwen-2.5B model...[/dim]")
     model = SALM.from_pretrained("nvidia/canary-qwen-2.5b")
+    model = model.cuda().eval()
 
     duration = get_audio_duration(audio_path)
     if duration <= CHUNK_SECONDS:
