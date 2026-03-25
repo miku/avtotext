@@ -195,8 +195,32 @@ def extract_audio(input_path: str, output_path: str) -> str:
         return normalize_audio(input_path, output_path)
 
 
+CHUNK_SECONDS = 30
+
+
+def get_audio_duration(audio_path: str) -> float:
+    """Get audio duration in seconds via ffprobe."""
+    probe = ffmpeg.probe(audio_path)
+    return float(probe["format"]["duration"])
+
+
+def split_audio(audio_path: str, chunk_dir: str, chunk_sec: int = CHUNK_SECONDS) -> list[str]:
+    """Split audio into fixed-length chunks, return list of chunk paths."""
+    duration = get_audio_duration(audio_path)
+    chunks = []
+    for start in range(0, int(duration) + 1, chunk_sec):
+        chunk_path = os.path.join(chunk_dir, f"chunk_{start:06d}.wav")
+        (
+            ffmpeg.input(audio_path, ss=start, t=chunk_sec)
+            .output(chunk_path, ar="16000", ac=1)
+            .run(quiet=True, overwrite_output=True)
+        )
+        chunks.append(chunk_path)
+    return chunks
+
+
 def transcribe(audio_path: str) -> str:
-    """Transcribe audio using NVIDIA Canary-Qwen-2.5B."""
+    """Transcribe audio using NVIDIA Canary-Qwen-2.5B, chunking long files."""
     import logging
 
     logging.getLogger("nemo_logger").setLevel(logging.ERROR)
@@ -205,20 +229,50 @@ def transcribe(audio_path: str) -> str:
 
     console.print("[dim]Loading Canary-Qwen-2.5B model...[/dim]")
     model = SALM.from_pretrained("nvidia/canary-qwen-2.5b")
-    console.print("[dim]Transcribing...[/dim]")
-    answer_ids = model.generate(
-        prompts=[
-            [
-                {
-                    "role": "user",
-                    "content": f"Transcribe the following: {model.audio_locator_tag}",
-                    "audio": [audio_path],
-                }
-            ]
-        ],
-        max_new_tokens=1024,
-    )
-    return model.tokenizer.ids_to_text(answer_ids[0].cpu())
+
+    duration = get_audio_duration(audio_path)
+    if duration <= CHUNK_SECONDS:
+        console.print("[dim]Transcribing...[/dim]")
+        answer_ids = model.generate(
+            prompts=[
+                [
+                    {
+                        "role": "user",
+                        "content": f"Transcribe the following: {model.audio_locator_tag}",
+                        "audio": [audio_path],
+                    }
+                ]
+            ],
+            max_new_tokens=1024,
+        )
+        return model.tokenizer.ids_to_text(answer_ids[0].cpu())
+
+    # Long audio: split into chunks
+    chunk_dir = tempfile.mkdtemp(prefix="vtt_chunks_")
+    try:
+        chunks = split_audio(audio_path, chunk_dir)
+        console.print(f"[dim]Transcribing {len(chunks)} chunks ({CHUNK_SECONDS}s each)...[/dim]")
+        parts = []
+        for i, chunk_path in enumerate(chunks):
+            console.print(f"[dim]  chunk {i + 1}/{len(chunks)}[/dim]")
+            answer_ids = model.generate(
+                prompts=[
+                    [
+                        {
+                            "role": "user",
+                            "content": f"Transcribe the following: {model.audio_locator_tag}",
+                            "audio": [chunk_path],
+                        }
+                    ]
+                ],
+                max_new_tokens=1024,
+            )
+            text = model.tokenizer.ids_to_text(answer_ids[0].cpu())
+            if text.strip():
+                parts.append(text.strip())
+        return " ".join(parts)
+    finally:
+        shutil.rmtree(chunk_dir, ignore_errors=True)
 
 
 @click.command()
