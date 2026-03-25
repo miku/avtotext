@@ -1,5 +1,6 @@
 #!/usr/bin/env -S uv run
 # /// script
+# requires-python = ">=3.12,<3.14"
 # dependencies = [
 #     "click",
 #     "rich",
@@ -19,9 +20,16 @@ Input can be a local file path, a URL, or a YouTube video ID.
 Requires an NVIDIA GPU.
 """
 
+import warnings
+import os
+
+# Silence NeMo and dependency warnings before any imports
+warnings.filterwarnings("ignore")
+os.environ["NEMO_LOG_LEVEL"] = "ERROR"
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = os.environ.get("PYTORCH_CUDA_ALLOC_CONF", "")
+
 import click
 import sys
-import os
 import re
 import hashlib
 import tempfile
@@ -175,6 +183,10 @@ def extract_audio(input_path: str, output_path: str) -> str:
 
 def transcribe(audio_path: str) -> str:
     """Transcribe audio using NVIDIA Canary-Qwen-2.5B."""
+    import logging
+
+    logging.getLogger("nemo_logger").setLevel(logging.ERROR)
+    logging.getLogger("pytorch_lightning").setLevel(logging.ERROR)
     from nemo.collections.speechlm2.models import SALM
 
     console.print("[dim]Loading Canary-Qwen-2.5B model...[/dim]")
