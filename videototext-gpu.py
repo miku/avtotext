@@ -5,29 +5,18 @@
 #     "rich",
 #     "yt-dlp",
 #     "ffmpeg-python",
-#     "openai-whisper",
-#     "torch",
-#     "torchaudio",
+#     "nemo_toolkit[asr]",
 # ]
-#
-# [[tool.uv.index]]
-# name = "pytorch-cpu"
-# url = "https://download.pytorch.org/whl/cpu"
-# explicit = true
-#
-# [tool.uv.sources]
-# torch = { index = "pytorch-cpu" }
-# torchaudio = { index = "pytorch-cpu" }
 # ///
 
 """
-videototext.py - Convert video/audio to text using OpenAI Whisper (CPU).
+videototext-gpu.py - Convert video/audio to text using NVIDIA Canary-Qwen-2.5B.
 
 Usage:
-    videototext.py <input> [options]
+    videototext-gpu.py <input> [options]
 
 Input can be a local file path, a URL, or a YouTube video ID.
-For GPU-accelerated transcription, see videototext-gpu.py.
+Requires an NVIDIA GPU.
 """
 
 import click
@@ -41,7 +30,6 @@ from pathlib import Path
 from rich.console import Console
 import yt_dlp
 import ffmpeg
-import whisper
 
 console = Console(stderr=True)
 
@@ -185,34 +173,40 @@ def extract_audio(input_path: str, output_path: str) -> str:
             raise RuntimeError(f"FFmpeg error: {stderr}")
 
 
-def transcribe_with_whisper(audio_path: str, model_name: str = "base") -> str:
-    """Transcribe audio using OpenAI Whisper."""
-    data_dir = get_data_dir() / "whisper"
-    data_dir.mkdir(parents=True, exist_ok=True)
-    console.print(f"[dim]Loading Whisper model:[/dim] {model_name}")
-    model = whisper.load_model(model_name, download_root=str(data_dir))
-    console.print("[dim]Transcribing...[/dim]")
-    result = model.transcribe(audio_path, fp16=False)
-    return result["text"]
+def transcribe(audio_path: str) -> str:
+    """Transcribe audio using NVIDIA Canary-Qwen-2.5B."""
+    from nemo.collections.speechlm2.models import SALM
 
+    console.print("[dim]Loading Canary-Qwen-2.5B model...[/dim]")
+    model = SALM.from_pretrained("nvidia/canary-qwen-2.5b")
+    console.print("[dim]Transcribing...[/dim]")
+    answer_ids = model.generate(
+        prompts=[
+            [
+                {
+                    "role": "user",
+                    "content": f"Transcribe the following: {model.audio_locator_tag}",
+                    "audio": [audio_path],
+                }
+            ]
+        ],
+        max_new_tokens=1024,
+    )
+    return model.tokenizer.ids_to_text(answer_ids[0].cpu())
 
 
 @click.command()
 @click.argument("input_source", required=False)
-@click.option(
-    "--model",
-    default="base",
-    help="Whisper model size (tiny, base, small, medium, large)",
-)
 @click.option("--output", "-o", type=click.Path(), help="Output text file")
 @click.option("--no-cache", is_flag=True, help="Bypass cache")
 @click.option("--clear-cache", is_flag=True, help="Remove all cached audio and transcripts")
 @click.option("--check", is_flag=True, help="Check for required external tools")
 @click.version_option(version="0.2.0")
-def cli(input_source, model, output, no_cache, clear_cache, check):
-    """Convert video/audio to text using OpenAI Whisper (CPU).
+def cli(input_source, output, no_cache, clear_cache, check):
+    """Convert video/audio to text using NVIDIA Canary-Qwen-2.5B.
 
     INPUT_SOURCE can be a local file path, a URL, or a YouTube video ID.
+    Requires an NVIDIA GPU.
     """
     if clear_cache:
         cache_dir = get_cache_dir()
@@ -221,7 +215,11 @@ def cli(input_source, model, output, no_cache, clear_cache, check):
         return
 
     if check:
-        tools = {"ffmpeg": shutil.which("ffmpeg"), "lame": shutil.which("lame")}
+        tools = {
+            "ffmpeg": shutil.which("ffmpeg"),
+            "lame": shutil.which("lame"),
+            "nvidia-smi": shutil.which("nvidia-smi"),
+        }
         console.print("\n[bold]External Tools[/bold]")
         for tool, path in tools.items():
             status = "[green]✓[/green]" if path else "[red]✗[/red]"
@@ -251,7 +249,7 @@ def cli(input_source, model, output, no_cache, clear_cache, check):
 
     cache_dir = get_cache_dir()
     src_key = source_key(input_source, input_type)
-    t_key = transcript_key(src_key, "whisper", model)
+    t_key = transcript_key(src_key, "canary", "canary-qwen-2.5b")
 
     # Check transcript cache
     transcript_cache = cache_dir / "transcripts" / f"{t_key}.txt"
@@ -281,7 +279,7 @@ def cli(input_source, model, output, no_cache, clear_cache, check):
             shutil.copy2(audio_path, audio_cache)
 
     try:
-        text = transcribe_with_whisper(audio_path, model)
+        text = transcribe(audio_path)
 
         # Cache the transcript
         transcript_cache.parent.mkdir(parents=True, exist_ok=True)
