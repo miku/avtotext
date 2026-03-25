@@ -23,12 +23,23 @@ Two self-contained scripts — pick the one that fits your hardware:
 
 ## Installation
 
-```bash
-# Install uv if needed
-cargo install uv  # or: pip install uv
+The only prerequisite is [uv](https://docs.astral.sh/uv/). Each script is
+self-contained and manages all its Python dependencies automatically on first
+run.
 
-# Each script manages its own dependencies via uv script metadata
+```bash
+# Install uv
+cargo install uv  # or: pip install uv, or: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Copy the script(s) somewhere in PATH and make executable
+cp videototext.py ~/.local/bin/
+chmod +x ~/.local/bin/videototext.py
 ```
+
+That's it. No virtualenvs, no `pip install`, no setup.py. On first run, `uv`
+resolves and caches the dependencies automatically.
+
+A `.deb`/`.rpm` package is also available (see `make deb` / `make rpm`).
 
 ## Usage
 
