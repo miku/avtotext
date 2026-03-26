@@ -7,6 +7,11 @@
 #     "yt-dlp",
 #     "ffmpeg-python",
 #     "nemo_toolkit[asr]",
+#     "transformers>=4.52,!=5.0.*,!=5.1.*",
+#     "soundfile",
+#     "librosa",
+#     "sentencepiece",
+#     "protobuf",
 # ]
 # ///
 
@@ -63,6 +68,12 @@ MODELS = {
         "api": "asr",
         "multilingual": False,
         "description": "600M English-only, fast and lightweight",
+    },
+    "cohere-transcribe": {
+        "pretrained": "CohereLabs/cohere-transcribe-03-2026",
+        "api": "cohere",
+        "multilingual": True,
+        "description": "2B multilingual (14 languages), high accuracy",
     },
 }
 
@@ -270,11 +281,34 @@ def _transcribe_asr_chunk(model, audio_path: str, lang: str, target_lang: str, m
     return result.text if hasattr(result, "text") else str(result)
 
 
+def _transcribe_cohere(audio_path: str, model_cfg: dict, lang: str) -> str:
+    import torch
+    from transformers import AutoProcessor, AutoModelForSpeechSeq2Seq
+
+    device = "cuda:0"
+    processor = AutoProcessor.from_pretrained(model_cfg["pretrained"], trust_remote_code=True)
+    model = AutoModelForSpeechSeq2Seq.from_pretrained(
+        model_cfg["pretrained"], trust_remote_code=True
+    ).to(device)
+    model.eval()
+
+    console.print("[dim]Transcribing...[/dim]")
+    texts = model.transcribe(
+        processor=processor,
+        audio_files=[audio_path],
+        language=lang,
+    )
+    return texts[0]
+
+
 def transcribe(audio_path: str, model_name: str, lang: str, target_lang: str) -> str:
     """Load model, chunk if needed, transcribe, return text."""
     model_cfg = MODELS[model_name]
 
     console.print(f"[dim]Loading model:[/dim] {model_cfg['pretrained']}")
+
+    if model_cfg["api"] == "cohere":
+        return _transcribe_cohere(audio_path, model_cfg, lang)
 
     if model_cfg["api"] == "salm":
         from nemo.collections.speechlm2.models import SALM
@@ -385,6 +419,9 @@ def cli(input_source, model_name, lang, target_lang, output, no_cache, clear_cac
         console.print(f"[yellow]{model_name} is English-only, ignoring --lang {lang}[/yellow]")
         lang = "en"
         target_lang = "en"
+    if model_cfg["api"] == "cohere" and target_lang != lang:
+        console.print(f"[yellow]{model_name} does not support translation, ignoring --target-lang {target_lang}[/yellow]")
+        target_lang = lang
 
     # Resolve input
     input_type = detect_input_type(input_source)

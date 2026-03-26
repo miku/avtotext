@@ -8,6 +8,11 @@
 #     "openai-whisper",
 #     "torch",
 #     "torchaudio",
+#     "transformers>=4.52,!=5.0.*,!=5.1.*",
+#     "soundfile",
+#     "librosa",
+#     "sentencepiece",
+#     "protobuf",
 # ]
 #
 # [[tool.uv.index]]
@@ -21,7 +26,7 @@
 # ///
 
 """
-avtotext.py - Transcribe audio/video to text using OpenAI Whisper (CPU).
+avtotext.py - Transcribe audio/video to text using Whisper or Cohere Transcribe (CPU).
 
 Input can be a local audio/video file (any format ffmpeg supports),
 a URL, or a YouTube video ID.
@@ -78,8 +83,8 @@ def source_key(input_source: str, input_type: str) -> str:
     return hashlib.sha256(raw.encode()).hexdigest()[:16]
 
 
-def transcript_key(src_key: str, model: str) -> str:
-    raw = f"{src_key}:whisper:{model}"
+def transcript_key(src_key: str, model: str, lang: str = "en") -> str:
+    raw = f"{src_key}:{model}:{lang}"
     return hashlib.sha256(raw.encode()).hexdigest()[:16]
 
 
@@ -208,10 +213,35 @@ def prepare_audio(input_source: str, input_type: str, output_path: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Models
+# ---------------------------------------------------------------------------
+
+MODELS = {
+    "tiny": {"type": "whisper", "description": "Whisper tiny (fastest, lowest accuracy)"},
+    "base": {"type": "whisper", "description": "Whisper base (default)"},
+    "small": {"type": "whisper", "description": "Whisper small"},
+    "medium": {"type": "whisper", "description": "Whisper medium"},
+    "large": {"type": "whisper", "description": "Whisper large (slowest, highest accuracy)"},
+    "cohere-transcribe": {
+        "type": "cohere",
+        "pretrained": "CohereLabs/cohere-transcribe-03-2026",
+        "description": "Cohere Transcribe 2B (14 languages, high accuracy)",
+    },
+}
+
+
+# ---------------------------------------------------------------------------
 # Transcription
 # ---------------------------------------------------------------------------
 
-def transcribe(audio_path: str, model_name: str) -> str:
+def transcribe(audio_path: str, model_name: str, lang: str = "en") -> str:
+    """Transcribe audio using the specified model."""
+    model_cfg = MODELS.get(model_name, {"type": "whisper"})
+
+    if model_cfg.get("type") == "cohere":
+        return _transcribe_cohere(audio_path, model_cfg, lang)
+
+    # Whisper (default)
     data_dir = get_data_dir() / "whisper"
     data_dir.mkdir(parents=True, exist_ok=True)
     console.print(f"[dim]Loading Whisper model:[/dim] {model_name}")
@@ -221,23 +251,58 @@ def transcribe(audio_path: str, model_name: str) -> str:
     return result["text"]
 
 
+def _transcribe_cohere(audio_path: str, model_cfg: dict, lang: str) -> str:
+    """Transcribe using Cohere Transcribe model (CPU)."""
+    import torch
+
+    device = "cpu"
+    from transformers import AutoProcessor, AutoModelForSpeechSeq2Seq
+
+    data_dir = get_data_dir() / "models" / model_cfg["pretrained"].replace("/", "_")
+    data_dir.mkdir(parents=True, exist_ok=True)
+
+    console.print(f"[dim]Loading model:[/dim] {model_cfg['pretrained']}")
+    processor = AutoProcessor.from_pretrained(
+        model_cfg["pretrained"], trust_remote_code=True, cache_dir=str(data_dir)
+    )
+    model = AutoModelForSpeechSeq2Seq.from_pretrained(
+        model_cfg["pretrained"], trust_remote_code=True, cache_dir=str(data_dir)
+    ).to(device)
+    model.eval()
+
+    console.print("[dim]Transcribing...[/dim]")
+    texts = model.transcribe(
+        processor=processor,
+        audio_files=[audio_path],
+        language=lang,
+    )
+    return texts[0]
+
+
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
 @click.command()
 @click.argument("input_source", required=False)
-@click.option("--model", default="base", help="Whisper model (tiny, base, small, medium, large)")
+@click.option("--model", default="base",
+              help="Model: whisper (tiny, base, small, medium, large) or cohere-transcribe")
+@click.option("--lang", default="en",
+              help="Language code (e.g., en, es, fr, de, ja, zh, ko, ar, vi, nl, pl, pt, el, it)")
 @click.option("--output", "-o", type=click.Path(), help="Write transcript to file")
 @click.option("--no-cache", is_flag=True, help="Bypass cache")
 @click.option("--clear-cache", is_flag=True, help="Remove all cached data")
 @click.option("--check", is_flag=True, help="Check external tools")
 @click.version_option(version="0.3.0")
-def cli(input_source, model, output, no_cache, clear_cache, check):
-    """Transcribe audio or video to text using OpenAI Whisper (CPU).
+def cli(input_source, model, output, no_cache, clear_cache, check, lang):
+    """Transcribe audio or video to text using Whisper or Cohere Transcribe (CPU).
 
     INPUT_SOURCE can be a local file (any format ffmpeg supports),
     a URL, or a YouTube video ID.
+
+    Models:
+      - whisper: OpenAI Whisper (tiny, base, small, medium, large)
+      - cohere-transcribe: Cohere Transcribe 2B (14 languages, requires --lang)
     """
     if clear_cache:
         shutil.rmtree(get_cache_dir(), ignore_errors=True)
@@ -269,7 +334,7 @@ def cli(input_source, model, output, no_cache, clear_cache, check):
     # Cache lookup
     cache_dir = get_cache_dir()
     src_key = source_key(input_source, input_type)
-    t_key = transcript_key(src_key, model)
+    t_key = transcript_key(src_key, model, lang)
     transcript_cache = cache_dir / "transcripts" / f"{t_key}.txt"
 
     if not no_cache and transcript_cache.exists():
@@ -298,7 +363,7 @@ def cli(input_source, model, output, no_cache, clear_cache, check):
             shutil.copy2(audio_path, audio_cache)
 
     try:
-        text = transcribe(audio_path, model)
+        text = transcribe(audio_path, model, lang)
 
         transcript_cache.parent.mkdir(parents=True, exist_ok=True)
         transcript_cache.write_text(text)

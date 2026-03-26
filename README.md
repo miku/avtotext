@@ -6,8 +6,8 @@ Two self-contained scripts — pick the one that fits your hardware:
 
 | Script | Backend | Hardware |
 |---|---|---|
-| `avtotext.py` | OpenAI Whisper | CPU |
-| `avtotext-gpu.py` | NVIDIA NeMo ASR | NVIDIA GPU |
+| `avtotext.py` | OpenAI Whisper, Cohere Transcribe | CPU |
+| `avtotext-gpu.py` | NVIDIA NeMo ASR, Cohere Transcribe | NVIDIA GPU |
 
 Input can be a local file (any format ffmpeg supports — mp3, wav, flac, mp4,
 mkv, webm, ...), a URL, or a YouTube video ID.
@@ -16,8 +16,9 @@ mkv, webm, ...), a URL, or a YouTube video ID.
 
 - Accepts audio or video in any format ffmpeg can read
 - Transcribe YouTube videos by URL or video ID
-- Multiple GPU models: Canary-1B-v2, Canary-Qwen-2.5B, Parakeet-0.6B
-- Multilingual transcription and speech translation (Canary models)
+- Multiple models: Whisper (CPU/GPU), Cohere Transcribe 2B (CPU/GPU), NeMo ASR (GPU)
+- Multilingual transcription (14 languages with Cohere, 25 with NeMo Canary)
+- Speech translation (NeMo Canary models only)
 - Caches downloaded audio and transcripts for instant repeat lookups
 - Transcript on stdout, diagnostics on stderr (pipe-friendly)
 
@@ -40,12 +41,16 @@ That's it. No virtualenvs, no `pip install`, no setup.py.
 
 ## Usage
 
-### CPU (Whisper)
+### CPU (Whisper, Cohere Transcribe)
 
 ```bash
-# Transcribe a local audio or video file
+# Transcribe a local audio or video file (default: Whisper base)
 avtotext.py recording.mp3
 avtotext.py lecture.mp4
+
+# Use Cohere Transcribe (requires Hugging Face login)
+avtotext.py recording.mp3 --model cohere-transcribe --lang en
+avtotext.py lecture.mp4 --model cohere-transcribe --lang ja
 
 # Pipe-friendly: transcript on stdout, progress on stderr
 avtotext.py interview.wav > transcript.txt
@@ -66,7 +71,14 @@ avtotext.py dQw4w9WgXcQ
 avtotext.py --check
 ```
 
-### GPU (NVIDIA [NeMo](https://docs.nvidia.com/nemo-framework/user-guide/latest/nemotoolkit/asr/intro.html))
+**Cohere Transcribe setup** (gated model):
+```bash
+# 1. Accept terms at: https://huggingface.co/CohereLabs/cohere-transcribe-03-2026
+# 2. Login to Hugging Face
+huggingface-cli login
+```
+
+### GPU (NVIDIA [NeMo](https://docs.nvidia.com/nemo-framework/user-guide/latest/nemotoolkit/asr/intro.html), Cohere Transcribe)
 
 ```bash
 # List available models
@@ -75,14 +87,17 @@ avtotext-gpu.py --list-models
 # Transcribe with default model (canary-1b-v2)
 avtotext-gpu.py recording.mp3
 
-# Choose a specific model
+# Cohere Transcribe (requires Hugging Face login)
+avtotext-gpu.py recording.mp3 --model cohere-transcribe --lang en
+
+# Choose a specific NeMo model
 avtotext-gpu.py lecture.mp4 --model canary-qwen-2.5b
 avtotext-gpu.py lecture.mp4 --model parakeet-0.6b
 
-# Multilingual: set source language (canary models)
+# Multilingual: set source language
 avtotext-gpu.py interview.wav --lang de
 
-# Translation: German audio to English text
+# Translation: German audio to English text (NeMo Canary only)
 avtotext-gpu.py interview.wav --lang de --target-lang en
 
 # From a URL
@@ -92,10 +107,11 @@ avtotext-gpu.py "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 #### Available GPU models
 
 | Model | Size | Languages | Notes |
-|---|---|---|---|
-| `canary-1b-v2` (default) | 1B | 25 languages | Multilingual, translation support |
-| `canary-qwen-2.5b` | 2.5B | multilingual | Highest quality, speech-language model |
-| `parakeet-0.6b` | 600M | English only | Fast and lightweight |
+|---|---|---|
+| `canary-1b-v2` (default) | 1B | 25 languages | NeMo, multilingual, translation |
+| `canary-qwen-2.5b` | 2.5B | multilingual | NeMo, highest quality, SLM |
+| `parakeet-0.6b` | 600M | English only | NeMo, fast and lightweight |
+| `cohere-transcribe` | 2B | 14 languages | Cohere, high accuracy |
 
 ## Caching
 
@@ -117,6 +133,6 @@ managed automatically.
 - [uv](https://docs.astral.sh/uv/) — runs the scripts and manages Python dependencies
 - `ffmpeg` — audio extraction and normalization (check with `--check`)
 - `nvidia-smi` — GPU script only
+- `huggingface-cli login` — required for Cohere Transcribe (gated model)
 
-Whisper models are stored in `$XDG_DATA_HOME/avtotext/whisper/` (defaults to
-`~/.local/share/avtotext/whisper/`).
+Models are cached in `$XDG_DATA_HOME/avtotext/` (defaults to `~/.local/share/avtotext/`).
