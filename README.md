@@ -1,107 +1,131 @@
-# avtotext
+# typeout
 
 Transcribe audio or video to text using ASR (Automatic Speech Recognition).
 
-Two self-contained scripts — pick the one that fits your hardware:
+A single self-contained script that auto-detects GPU availability and uses the appropriate backend.
 
-| Script | Backend | Hardware |
+| Backend | Hardware | Models |
 |---|---|---|
-| `avtotext.py` | OpenAI Whisper | CPU |
-| `avtotext-gpu.py` | NVIDIA NeMo ASR | NVIDIA GPU |
+| OpenAI Whisper | CPU | tiny, base, small, medium, large |
+| Cohere Transcribe 2B | CPU/GPU | 14 languages |
+| NVIDIA NeMo ASR | GPU | Canary-1B-v2, Canary-Qwen-2.5B, Parakeet-0.6B |
 
-Input can be a local file (any format ffmpeg supports — mp3, wav, flac, mp4,
-mkv, webm, ...), a URL, or a YouTube video ID.
+Input can be a local file (any format ffmpeg supports — mp3, wav, flac, mp4, mkv, webm, ...), a URL, or a YouTube video ID.
 
 ## Features
 
+- **Single command** — auto-detects GPU and uses the right backend
 - Accepts audio or video in any format ffmpeg can read
 - Transcribe YouTube videos by URL or video ID
-- Multiple GPU models: Canary-1B-v2, Canary-Qwen-2.5B, Parakeet-0.6B
-- Multilingual transcription and speech translation (Canary models)
+- Multiple models: Whisper, Cohere Transcribe, NeMo ASR
+- Multilingual transcription (14 languages with Cohere, 25 with NeMo Canary)
+- Speech translation (NeMo Canary models only)
 - Caches downloaded audio and transcripts for instant repeat lookups
 - Transcript on stdout, diagnostics on stderr (pipe-friendly)
 
 ## Installation
 
-The only prerequisite is [uv](https://docs.astral.sh/uv/). Each script is
-self-contained and manages all Python dependencies automatically on first run
-via [uv script](https://docs.astral.sh/uv/guides/scripts/#declaring-script-dependencies).
+The only prerequisite is [uv](https://docs.astral.sh/uv/). The script is self-contained and manages all Python dependencies automatically on first run.
 
 ```bash
 # Install uv
-cargo install uv  # or: pip install uv, or: curl -LsSf https://astral.sh/uv/install.sh | sh
+cargo install uv  # or: pip install uv
 
-# Copy the script(s) somewhere in PATH and make executable
-cp avtotext.py ~/.local/bin/
-chmod +x ~/.local/bin/avtotext.py
+# Download typeout
+curl -O https://raw.githubusercontent.com/tir/code/refs/heads/main/miku/avtotext/typeout
+# or
+wget https://raw.githubusercontent.com/tir/code/refs/heads/main/miku/avtotext/typeout
+
+# Make executable and put in PATH
+chmod +x typeout
+mv typeout ~/.local/bin/
 ```
 
 That's it. No virtualenvs, no `pip install`, no setup.py.
 
 ## Usage
 
-### CPU (Whisper)
-
 ```bash
-# Transcribe a local audio or video file
-avtotext.py recording.mp3
-avtotext.py lecture.mp4
-
-# Pipe-friendly: transcript on stdout, progress on stderr
-avtotext.py interview.wav > transcript.txt
+# Transcribe a local file
+typeout recording.mp3
+typeout lecture.mp4
 
 # Write to file
-avtotext.py podcast.flac -o transcript.txt
+typeout podcast.flac -o transcript.txt
 
-# Use a different Whisper model (tiny, base, small, medium, large)
-avtotext.py recording.mp3 --model small
+# Use different Whisper model (CPU)
+typeout recording.mp3 --model small
 
-# Transcribe from a URL
-avtotext.py "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+# Use Cohere Transcribe (CPU/GPU, requires Hugging Face login)
+typeout recording.mp3 --model cohere-transcribe --lang en
+typeout lecture.mp4 --model cohere-transcribe --lang ja
 
-# YouTube video ID (11 characters)
-avtotext.py dQw4w9WgXcQ
+# GPU models (auto-detected on systems with NVIDIA GPU)
+typeout recording.mp3 --model canary-qwen-2.5b
+typeout lecture.mp4 --model parakeet-0.6b
+
+# Multilingual: set source language
+typeout interview.wav --lang de
+
+# Translation: German audio to English text (NeMo Canary only)
+typeout interview.wav --lang de --target-lang en
+
+# From a URL or YouTube ID
+typeout "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+typeout dQw4w9WgXcQ
 
 # Check external tools
-avtotext.py --check
+typeout --check
+
+# Clear cache
+typeout --clear-cache
+
+# List GPU models
+typeout --list-models
 ```
 
-### GPU (NVIDIA [NeMo](https://docs.nvidia.com/nemo-framework/user-guide/latest/nemotoolkit/asr/intro.html))
+## Models
 
-```bash
-# List available models
-avtotext-gpu.py --list-models
-
-# Transcribe with default model (canary-1b-v2)
-avtotext-gpu.py recording.mp3
-
-# Choose a specific model
-avtotext-gpu.py lecture.mp4 --model canary-qwen-2.5b
-avtotext-gpu.py lecture.mp4 --model parakeet-0.6b
-
-# Multilingual: set source language (canary models)
-avtotext-gpu.py interview.wav --lang de
-
-# Translation: German audio to English text
-avtotext-gpu.py interview.wav --lang de --target-lang en
-
-# From a URL
-avtotext-gpu.py "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-```
-
-#### Available GPU models
+### CPU (auto-selected)
 
 | Model | Size | Languages | Notes |
 |---|---|---|---|
-| `canary-1b-v2` (default) | 1B | 25 languages | Multilingual, translation support |
-| `canary-qwen-2.5b` | 2.5B | multilingual | Highest quality, speech-language model |
-| `parakeet-0.6b` | 600M | English only | Fast and lightweight |
+| `base` (default) | ~140MB | multilingual | Whisper, good balance |
+| `tiny` | ~40MB | multilingual | Whisper, fastest |
+| `small` | ~460MB | multilingual | Whisper |
+| `medium` | ~1.5GB | multilingual | Whisper |
+| `large` | ~2.9GB | multilingual | Whisper, highest accuracy |
+| `cohere-transcribe` | ~4GB | 14 languages | High accuracy, requires HF login |
+
+### GPU (auto-selected when NVIDIA GPU detected)
+
+| Model | Size | Languages | Notes |
+|---|---|---|---|
+| `canary-1b-v2` (default) | 1B | 25 languages | NeMo, multilingual, translation |
+| `canary-qwen-2.5b` | 2.5B | multilingual | NeMo, highest quality, SLM |
+| `parakeet-0.6b` | 600M | English only | NeMo, fast and lightweight |
+| `cohere-transcribe` | 2B | 14 languages | Cohere, high accuracy |
+
+**Cohere Transcribe setup** (gated model):
+```bash
+# 1. Accept terms at: https://huggingface.co/CohereLabs/cohere-transcribe-03-2026
+# 2. Login to Hugging Face
+huggingface-cli login
+```
+
+## How it works
+
+The `typeout` script is an **amalgamation** — it contains both CPU and GPU Python scripts embedded within it. On first run:
+
+1. Detects if NVIDIA GPU is available (`nvidia-smi`)
+2. Extracts the appropriate Python script to `~/.cache/typeout/`
+3. Runs it with `uv run`, which installs dependencies automatically
+
+Subsequent runs reuse the extracted script (unless you upgrade typeout).
 
 ## Caching
 
-Downloaded audio (for URLs) and transcripts are cached in
-`$XDG_CACHE_HOME/avtotext/` (defaults to `~/.cache/avtotext/`). Both scripts
-share the same cache directory.
+Downloaded audio (for URLs) and transcripts are cached in `~/.cache/typeout/` (respects `$XDG_CACHE_HOME`).
 
 - **URLs**: keyed by URL — same URL hits cache instantly
 - **Local files**: keyed by path + modification time + size — cache invalidates on edit
@@ -111,12 +135,9 @@ Use `--no-cache` to bypass, `--clear-cache` to remove all cached data.
 
 ## Dependencies
 
-The only thing you need to install is `uv` and `ffmpeg`. Everything else is
-managed automatically.
-
-- [uv](https://docs.astral.sh/uv/) — runs the scripts and manages Python dependencies
+- [uv](https://docs.astral.sh/uv/) — runs the script and manages Python dependencies
 - `ffmpeg` — audio extraction and normalization (check with `--check`)
-- `nvidia-smi` — GPU script only
+- `nvidia-smi` — GPU detection (auto-detected)
+- `huggingface-cli login` — required for Cohere Transcribe (gated model)
 
-Whisper models are stored in `$XDG_DATA_HOME/avtotext/whisper/` (defaults to
-`~/.local/share/avtotext/whisper/`).
+Models are cached in `~/.local/share/typeout/` (respects `$XDG_DATA_HOME`).
