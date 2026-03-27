@@ -342,7 +342,7 @@ def _transcribe_cohere(audio_path: str, model_cfg: dict, lang: str) -> str:
 @click.command()
 @click.argument("input_source", required=False)
 @click.option("--model", default="base",
-              help="Model: whisper (tiny, base, small, medium, large) or cohere-transcribe")
+              help="Model name (use --list-models to see all)")
 @click.option("--lang", default="en",
               help="Language code (e.g., en, es, fr, de, ja, zh, ko, ar, vi, nl, pl, pt, el, it)")
 @click.option("--output", "-o", type=click.Path(), help="Write transcript to file")
@@ -352,14 +352,10 @@ def _transcribe_cohere(audio_path: str, model_cfg: dict, lang: str) -> str:
 @click.option("--check", is_flag=True, help="Check external tools")
 @click.version_option(version="0.3.0")
 def cli(input_source, model, output, no_cache, clear_cache, list_models, check, lang):
-    """Transcribe audio or video to text using Whisper or Cohere Transcribe (CPU).
+    """Transcribe audio or video to text (CPU).
 
     INPUT_SOURCE can be a local file (any format ffmpeg supports),
-    a URL, or a YouTube video ID.
-
-    Models:
-      - whisper: OpenAI Whisper (tiny, base, small, medium, large)
-      - cohere-transcribe: Cohere Transcribe 2B (14 languages, requires --lang)
+    a URL, or a YouTube video ID. Use --list-models to see available models.
     """
     if list_models:
         print_models()
