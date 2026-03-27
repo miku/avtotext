@@ -84,7 +84,7 @@ typeout --check
 # Clear cache
 typeout --clear-cache
 
-# List GPU models
+# List models
 typeout --list-models
 ```
 
