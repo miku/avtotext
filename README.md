@@ -95,7 +95,7 @@ typeout --list-models
 
 | Model | Size | Languages | Notes |
 |---|---|---|---|
-| `base` **CPU default** | ~140MB | multilingual | [Whisper](https://openai.com/index/whisper/), good balance |
+| `base` · **CPU default** | ~140MB | multilingual | [Whisper](https://openai.com/index/whisper/), good balance |
 | `tiny` | ~40MB | multilingual | [Whisper](https://openai.com/index/whisper/), fastest |
 | `small` | ~460MB | multilingual | [Whisper](https://openai.com/index/whisper/) |
 | `medium` | ~1.5GB | multilingual | [Whisper](https://openai.com/index/whisper/) |
@@ -103,7 +103,7 @@ typeout --list-models
 | `distil-large-v3` | ~750MB | multilingual | [Distil-Whisper](https://github.com/huggingface/distil-whisper), 6x faster than large |
 | `distil-medium.en` | ~400MB | English only | [Distil-Whisper](https://github.com/huggingface/distil-whisper), fast |
 | `cohere-transcribe` | 2-4GB | 14 languages | [Cohere](https://huggingface.co/CohereLabs/cohere-transcribe-03-2026), high accuracy, requires HF login |
-| `canary-1b-v2` **GPU default** | 1B | 25 languages | **NVIDIA only**, [NeMo](https://huggingface.co/nvidia/canary-1b-v2), multilingual, translation |
+| `canary-1b-v2` · **GPU default** | 1B | 25 languages | **NVIDIA only**, [NeMo](https://huggingface.co/nvidia/canary-1b-v2), multilingual, translation |
 | `canary-qwen-2.5b` | 2.5B | multilingual | **NVIDIA only**, [NeMo](https://huggingface.co/nvidia/canary-qwen-2.5b), highest quality, SLM |
 | `parakeet-0.6b` | 600M | English only | **NVIDIA only**, [NeMo](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2), fast and lightweight |
 
