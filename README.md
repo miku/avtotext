@@ -1,6 +1,6 @@
 # typeout
 
-Transcribe audio or video to text using ASR (Automatic Speech Recognition).
+CLI utility to transcribe audio or video to text using ASR (Automatic Speech Recognition).
 
 A single self-contained script that auto-detects GPU availability and uses the appropriate backend.
 
@@ -93,34 +93,19 @@ typeout --list-models
 
 ## Models
 
-### CPU (auto-selected)
-
 | Model | Size | Languages | Notes |
 |---|---|---|---|
-| `base` (default) | ~140MB | multilingual | Whisper, good balance |
-| `tiny` | ~40MB | multilingual | Whisper, fastest |
-| `small` | ~460MB | multilingual | Whisper |
-| `medium` | ~1.5GB | multilingual | Whisper |
-| `large` | ~2.9GB | multilingual | Whisper, highest accuracy |
+| `base`, `whisper-base` (CPU default) | ~140MB | multilingual | Whisper, good balance |
+| `tiny`, `whisper-tiny` | ~40MB | multilingual | Whisper, fastest |
+| `small`, `whisper-small` | ~460MB | multilingual | Whisper |
+| `medium`, `whisper-medium` | ~1.5GB | multilingual | Whisper |
+| `large`, `whisper-large` | ~2.9GB | multilingual | Whisper, highest accuracy |
 | `distil-large-v3` | ~750MB | multilingual | Distil-Whisper, 6x faster than large |
 | `distil-medium.en` | ~400MB | English only | Distil-Whisper, fast |
-| `cohere-transcribe` | ~4GB | 14 languages | High accuracy, requires HF login |
-
-### GPU (auto-selected when NVIDIA GPU detected)
-
-| Model | Size | Languages | Notes |
-|---|---|---|---|
-| `canary-1b-v2` (default) | 1B | 25 languages | NeMo, multilingual, translation |
-| `canary-qwen-2.5b` | 2.5B | multilingual | NeMo, highest quality, SLM |
-| `parakeet-0.6b` | 600M | English only | NeMo, fast and lightweight |
-| `cohere-transcribe` | 2B | 14 languages | Cohere, high accuracy |
-| `distil-large-v3` | ~750MB | multilingual | Distil-Whisper, 6x faster than large |
-| `distil-medium.en` | ~400MB | English only | Distil-Whisper, fast |
-| `whisper-tiny` | ~40MB | multilingual | Whisper, fastest |
-| `whisper-base` | ~140MB | multilingual | Whisper, good balance |
-| `whisper-small` | ~460MB | multilingual | Whisper |
-| `whisper-medium` | ~1.5GB | multilingual | Whisper |
-| `whisper-large` | ~2.9GB | multilingual | Whisper, highest accuracy |
+| `cohere-transcribe` | 2-4GB | 14 languages | Cohere, high accuracy, requires HF login |
+| `canary-1b-v2` (GPU default) | 1B | 25 languages | **NVIDIA only**, NeMo, multilingual, translation |
+| `canary-qwen-2.5b` | 2.5B | multilingual | **NVIDIA only**, NeMo, highest quality, SLM |
+| `parakeet-0.6b` | 600M | English only | **NVIDIA only**, NeMo, fast and lightweight |
 
 **Cohere Transcribe setup** (gated model):
 ```bash
