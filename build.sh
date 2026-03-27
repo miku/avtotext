@@ -17,7 +17,7 @@ cat > "$TYPEOUT" << 'HEADER'
 HEADER
 
 echo "# Version $VERSION" >> "$TYPEOUT"
-echo "# https://github.com/tir/code/miku/avtotext" >> "$TYPEOUT"
+echo "# https://github.com/tir/code/miku/typeout" >> "$TYPEOUT"
 echo "" >> "$TYPEOUT"
 
 cat >> "$TYPEOUT" << 'BOILERPLATE'
