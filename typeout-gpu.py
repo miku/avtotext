@@ -6,6 +6,7 @@
 #     "rich",
 #     "yt-dlp",
 #     "ffmpeg-python",
+#     "openai-whisper",
 #     "nemo_toolkit[asr]",
 #     "transformers>=4.52,!=5.0.*,!=5.1.*",
 #     "soundfile",
@@ -77,6 +78,36 @@ MODELS = {
         "multilingual": True,
         "description": "2B multilingual (14 languages), high accuracy",
     },
+    "whisper-tiny": {
+        "pretrained": "tiny",
+        "api": "whisper",
+        "multilingual": True,
+        "description": "Whisper tiny, fastest, lowest accuracy",
+    },
+    "whisper-base": {
+        "pretrained": "base",
+        "api": "whisper",
+        "multilingual": True,
+        "description": "Whisper base, good balance of speed and accuracy",
+    },
+    "whisper-small": {
+        "pretrained": "small",
+        "api": "whisper",
+        "multilingual": True,
+        "description": "Whisper small, moderate accuracy",
+    },
+    "whisper-medium": {
+        "pretrained": "medium",
+        "api": "whisper",
+        "multilingual": True,
+        "description": "Whisper medium, high accuracy",
+    },
+    "whisper-large": {
+        "pretrained": "large",
+        "api": "whisper",
+        "multilingual": True,
+        "description": "Whisper large, highest accuracy",
+    },
 }
 
 DEFAULT_MODEL = "canary-1b-v2"
@@ -85,6 +116,13 @@ DEFAULT_MODEL = "canary-1b-v2"
 # ---------------------------------------------------------------------------
 # Paths
 # ---------------------------------------------------------------------------
+
+def get_data_dir() -> Path:
+    xdg = os.environ.get("XDG_DATA_HOME", os.path.expanduser("~/.local/share"))
+    d = Path(xdg) / APP_NAME
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
 
 def get_cache_dir() -> Path:
     xdg = os.environ.get("XDG_CACHE_HOME", os.path.expanduser("~/.cache"))
@@ -303,11 +341,26 @@ def _transcribe_cohere(audio_path: str, model_cfg: dict, lang: str) -> str:
     return texts[0]
 
 
+def _transcribe_whisper(audio_path: str, model_name: str, lang: str) -> str:
+    import whisper
+
+    data_dir = get_data_dir() / "whisper"
+    data_dir.mkdir(parents=True, exist_ok=True)
+    console.print(f"[dim]Loading Whisper model:[/dim] {model_name}")
+    model = whisper.load_model(model_name, download_root=str(data_dir))
+    console.print("[dim]Transcribing...[/dim]")
+    result = model.transcribe(audio_path, language=lang)
+    return result["text"]
+
+
 def transcribe(audio_path: str, model_name: str, lang: str, target_lang: str) -> str:
     """Load model, chunk if needed, transcribe, return text."""
     model_cfg = MODELS[model_name]
 
     console.print(f"[dim]Loading model:[/dim] {model_cfg['pretrained']}")
+
+    if model_cfg["api"] == "whisper":
+        return _transcribe_whisper(audio_path, model_cfg["pretrained"], lang)
 
     if model_cfg["api"] == "cohere":
         return _transcribe_cohere(audio_path, model_cfg, lang)
@@ -421,7 +474,7 @@ def cli(input_source, model_name, lang, target_lang, output, no_cache, clear_cac
         console.print(f"[yellow]{model_name} is English-only, ignoring --lang {lang}[/yellow]")
         lang = "en"
         target_lang = "en"
-    if model_cfg["api"] == "cohere" and target_lang != lang:
+    if model_cfg["api"] in ("cohere", "whisper") and target_lang != lang:
         console.print(f"[yellow]{model_name} does not support translation, ignoring --target-lang {target_lang}[/yellow]")
         target_lang = lang
 

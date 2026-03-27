@@ -6,7 +6,7 @@ A single self-contained script that auto-detects GPU availability and uses the a
 
 | Backend | Hardware | Models |
 |---|---|---|
-| OpenAI Whisper | CPU | tiny, base, small, medium, large |
+| OpenAI Whisper | CPU/GPU | tiny, base, small, medium, large |
 | Cohere Transcribe 2B | CPU/GPU | 14 languages |
 | NVIDIA NeMo ASR | GPU | Canary-1B-v2, Canary-Qwen-2.5B, Parakeet-0.6B |
 
@@ -64,6 +64,9 @@ typeout lecture.mp4 --model cohere-transcribe --lang ja
 typeout recording.mp3 --model canary-qwen-2.5b
 typeout lecture.mp4 --model parakeet-0.6b
 
+# Use Whisper on GPU (fp16 acceleration)
+typeout recording.mp3 --model whisper-large
+
 # Multilingual: set source language
 typeout interview.wav --lang de
 
@@ -105,6 +108,11 @@ typeout --list-models
 | `canary-qwen-2.5b` | 2.5B | multilingual | NeMo, highest quality, SLM |
 | `parakeet-0.6b` | 600M | English only | NeMo, fast and lightweight |
 | `cohere-transcribe` | 2B | 14 languages | Cohere, high accuracy |
+| `whisper-tiny` | ~40MB | multilingual | Whisper, fastest |
+| `whisper-base` | ~140MB | multilingual | Whisper, good balance |
+| `whisper-small` | ~460MB | multilingual | Whisper |
+| `whisper-medium` | ~1.5GB | multilingual | Whisper |
+| `whisper-large` | ~2.9GB | multilingual | Whisper, highest accuracy |
 
 **Cohere Transcribe setup** (gated model):
 ```bash
