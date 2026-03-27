@@ -16,7 +16,9 @@
 # ///
 
 """
-avtotext-gpu.py - Transcribe audio/video to text using NVIDIA NeMo ASR (GPU).
+typeout-gpu.py - GPU backend for typeout transcription.
+
+Transcribe audio/video to text using NVIDIA NeMo ASR or Cohere Transcribe (GPU).
 
 Input can be a local audio/video file (any format ffmpeg supports),
 a URL, or a YouTube video ID. Requires an NVIDIA GPU.
@@ -47,7 +49,7 @@ import ffmpeg
 
 console = Console(stderr=True)
 
-APP_NAME = "avtotext"
+APP_NAME = "typeout"
 CHUNK_SECONDS = 30
 
 MODELS = {

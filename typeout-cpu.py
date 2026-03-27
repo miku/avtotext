@@ -26,12 +26,12 @@
 # ///
 
 """
-avtotext.py - Transcribe audio/video to text using Whisper or Cohere Transcribe (CPU).
+typeout-cpu.py - CPU backend for typeout transcription.
+
+Transcribe audio/video to text using Whisper or Cohere Transcribe (CPU).
 
 Input can be a local audio/video file (any format ffmpeg supports),
 a URL, or a YouTube video ID.
-
-For GPU-accelerated transcription, see avtotext-gpu.py.
 """
 
 import click
@@ -49,7 +49,7 @@ import whisper
 
 console = Console(stderr=True)
 
-APP_NAME = "avtotext"
+APP_NAME = "typeout"
 
 
 # ---------------------------------------------------------------------------
