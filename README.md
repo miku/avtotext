@@ -102,10 +102,10 @@ typeout --list-models
 | `large` | ~2.9GB | multilingual | [Whisper](https://openai.com/index/whisper/), highest accuracy |
 | `distil-large-v3` | ~750MB | multilingual | [Distil-Whisper](https://github.com/huggingface/distil-whisper), 6x faster than large |
 | `distil-medium.en` | ~400MB | English only | [Distil-Whisper](https://github.com/huggingface/distil-whisper), fast |
-| `cohere-transcribe` | 2-4GB | 14 languages | [Cohere](https://huggingface.co/CohereLabs/cohere-transcribe-03-2026), high accuracy, requires HF login |
-| `canary-1b-v2` · **GPU default** | 1B | 25 languages | **NVIDIA only**, [NeMo](https://huggingface.co/nvidia/canary-1b-v2), multilingual, translation |
-| `canary-qwen-2.5b` | 2.5B | multilingual | **NVIDIA only**, [NeMo](https://huggingface.co/nvidia/canary-qwen-2.5b), highest quality, SLM |
-| `parakeet-0.6b` | 600M | English only | **NVIDIA only**, [NeMo](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2), fast and lightweight |
+| `cohere-transcribe` | ~4.1GB | 14 languages | [Cohere](https://huggingface.co/CohereLabs/cohere-transcribe-03-2026), high accuracy, requires HF login |
+| `canary-1b-v2` · **GPU default** | ~6.4GB | 25 languages | **NVIDIA only**, [NeMo](https://huggingface.co/nvidia/canary-1b-v2), multilingual, translation |
+| `canary-qwen-2.5b` | ~5.1GB | multilingual | **NVIDIA only**, [NeMo](https://huggingface.co/nvidia/canary-qwen-2.5b), highest quality, SLM |
+| `parakeet-0.6b` | ~2.5GB | English only | **NVIDIA only**, [NeMo](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2), fast and lightweight |
 
 **Cohere Transcribe setup** (gated model):
 ```bash
