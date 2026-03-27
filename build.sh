@@ -6,7 +6,7 @@ set -e
 TYPEOUT="typeout"
 TYPEOUT_CPU="typeout-cpu.py"
 TYPEOUT_GPU="typeout-gpu.py"
-VERSION="0.3.0"
+VERSION="${VERSION:-0.3.0}"
 
 echo "Building $TYPEOUT..."
 
@@ -93,6 +93,12 @@ GPUSCRIPT
 
 main "$@"
 FOOTER2
+
+# Stamp version into assembled output
+sed -i \
+    -e "s/Version [0-9][0-9.]*/Version $VERSION/g" \
+    -e "s/version=\"[0-9][0-9.]*\"/version=\"$VERSION\"/g" \
+    "$TYPEOUT"
 
 chmod +x "$TYPEOUT"
 echo "Done: $TYPEOUT"

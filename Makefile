@@ -1,5 +1,6 @@
 .PHONY: all clean dist check install help
 
+VERSION ?= 0.3.0
 TYPEOUT = typeout
 TYPEOUT_CPU = typeout-cpu.py
 TYPEOUT_GPU = typeout-gpu.py
@@ -7,7 +8,7 @@ TYPEOUT_GPU = typeout-gpu.py
 all: $(TYPEOUT)
 
 $(TYPEOUT): $(TYPEOUT_CPU) $(TYPEOUT_GPU)
-	./build.sh
+	VERSION=$(VERSION) ./build.sh
 
 clean:
 	rm -f $(TYPEOUT)
