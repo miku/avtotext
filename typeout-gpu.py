@@ -372,7 +372,7 @@ def _transcribe_distil_whisper(audio_path: str, model_cfg: dict, lang: str) -> s
     device = "cuda:0"
     console.print(f"[dim]Loading model:[/dim] {model_cfg['pretrained']}")
     model = AutoModelForSpeechSeq2Seq.from_pretrained(
-        model_cfg["pretrained"], torch_dtype=torch.float16,
+        model_cfg["pretrained"], dtype=torch.float16,
     ).to(device)
     processor = AutoProcessor.from_pretrained(model_cfg["pretrained"])
 
@@ -381,7 +381,7 @@ def _transcribe_distil_whisper(audio_path: str, model_cfg: dict, lang: str) -> s
         model=model,
         tokenizer=processor.tokenizer,
         feature_extractor=processor.feature_extractor,
-        torch_dtype=torch.float16,
+        dtype=torch.float16,
         device=device,
     )
 
