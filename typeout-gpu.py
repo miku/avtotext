@@ -90,31 +90,31 @@ MODELS = {
         "multilingual": False,
         "description": "Distil-Whisper medium English-only (~400MB, fast)",
     },
-    "whisper-tiny": {
+    "tiny": {
         "pretrained": "tiny",
         "api": "whisper",
         "multilingual": True,
         "description": "Whisper tiny, fastest, lowest accuracy",
     },
-    "whisper-base": {
+    "base": {
         "pretrained": "base",
         "api": "whisper",
         "multilingual": True,
         "description": "Whisper base, good balance of speed and accuracy",
     },
-    "whisper-small": {
+    "small": {
         "pretrained": "small",
         "api": "whisper",
         "multilingual": True,
         "description": "Whisper small, moderate accuracy",
     },
-    "whisper-medium": {
+    "medium": {
         "pretrained": "medium",
         "api": "whisper",
         "multilingual": True,
         "description": "Whisper medium, high accuracy",
     },
-    "whisper-large": {
+    "large": {
         "pretrained": "large",
         "api": "whisper",
         "multilingual": True,
