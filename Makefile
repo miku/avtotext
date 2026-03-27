@@ -1,6 +1,6 @@
 .PHONY: all clean dist check install help
 
-VERSION ?= 0.3.0
+VERSION ?= 0.4.0
 TYPEOUT = typeout
 TYPEOUT_CPU = typeout-cpu.py
 TYPEOUT_GPU = typeout-gpu.py
