@@ -59,10 +59,7 @@ main() {
         script_file="$script_dir/typeout-cpu.py"
     fi
 
-    # Extract script if not present or version mismatch
-    if [[ ! -f "$script_file" ]] || ! grep -q "Version 0.3.0" "$script_file" 2>/dev/null; then
-        extract_"$backend"_script "$script_file"
-    fi
+    extract_"$backend"_script "$script_file"
 
     exec uv run "$script_file" "$@"
 }
