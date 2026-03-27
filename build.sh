@@ -6,7 +6,7 @@ set -e
 TYPEOUT="typeout"
 TYPEOUT_CPU="typeout-cpu.py"
 TYPEOUT_GPU="typeout-gpu.py"
-VERSION="${VERSION:-0.3.0}"
+VERSION="${VERSION:-dev}"
 
 echo "Building $TYPEOUT..."
 
@@ -17,10 +17,10 @@ cat > "$TYPEOUT" << 'HEADER'
 HEADER
 
 echo "# Version $VERSION" >> "$TYPEOUT"
-echo "# https://github.com/tir/code/miku/typeout" >> "$TYPEOUT"
+echo "# https://github.com/miku/typeout" >> "$TYPEOUT"
 echo "" >> "$TYPEOUT"
 
-cat >> "$TYPEOUT" << 'BOILERPLATE'
+cat >> "$TYPEOUT" << 'EOM'
 set -o pipefail
 
 # Check for uv
@@ -67,7 +67,7 @@ main() {
 # Extract CPU version of the script
 extract_cpu_script() {
     cat > "$1" << 'CPUSCRIPT'
-BOILERPLATE
+EOM
 
 cat "$TYPEOUT_CPU" >> "$TYPEOUT"
 
