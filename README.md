@@ -150,7 +150,7 @@ $ typeout --lang de \
     https://swr-pd.ard-mcdn.de/swr/swrkultur/hoerspiel/ard-hoerspiel-speicher/2303264.mp3
 ```
 
-Transcibing a 7h+ audio book [[UBIK](https://en.wikipedia.org/wiki/Ubik)] takes
+Transcribing a 7h+ audio book [[UBIK](https://en.wikipedia.org/wiki/Ubik)] takes
 about 14 minutes on a [70W RTX 4000
 SFF](https://www.nvidia.com/content/dam/en-zz/Solutions/rtx-4000-sff/proviz-rtx-4000-sff-ada-datasheet-2616456-web.pdf)
 with [canary-1b-v2](https://huggingface.co/nvidia/canary-1b-v2).
