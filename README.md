@@ -33,9 +33,9 @@ The only prerequisite is [uv](https://docs.astral.sh/uv/). The script is self-co
 cargo install uv  # or: pip install uv
 
 # Download typeout
-curl -O https://raw.githubusercontent.com/tir/code/refs/heads/main/miku/avtotext/typeout
+curl -O https://raw.githubusercontent.com/miku/typeout/refs/heads/main/typeout
 # or
-wget https://raw.githubusercontent.com/tir/code/refs/heads/main/miku/avtotext/typeout
+wget https://raw.githubusercontent.com/miku/typeout/refs/heads/main/typeout
 
 # Make executable and put in PATH
 chmod +x typeout
