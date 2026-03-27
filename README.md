@@ -26,7 +26,10 @@ Input can be a local file (any format ffmpeg supports — mp3, wav, flac, mp4, m
 
 ## Installation
 
-The only prerequisite is [uv](https://docs.astral.sh/uv/). The script is self-contained and manages all Python dependencies automatically on first run.
+The only prerequisite is [uv](https://docs.astral.sh/uv/). The script is
+self-contained and manages all Python dependencies automatically on first run.
+A shortcut to the script can be found at
+[https://tinyurl.com/typeout](https://tinyurl.com/typeout).
 
 ```bash
 # Install uv
