@@ -39,10 +39,8 @@ cargo install uv  # or: pip install uv
 
 # Download typeout
 curl -O https://raw.githubusercontent.com/miku/typeout/refs/heads/main/typeout
-# or
-wget https://raw.githubusercontent.com/miku/typeout/refs/heads/main/typeout
 
-# Make executable and put in PATH
+# Make executable and put somewhete into PATH
 chmod +x typeout
 mv typeout ~/.local/bin/
 ```
