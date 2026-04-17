@@ -70,6 +70,14 @@ def get_cache_dir() -> Path:
     return d
 
 
+def _atomic_write_text(path: Path, text: str) -> None:
+    """Write text via sibling tmp + rename so interrupted writes can't corrupt the target."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(text, encoding="utf-8")
+    tmp.replace(path)
+
+
 # ---------------------------------------------------------------------------
 # Cache keys
 # ---------------------------------------------------------------------------
@@ -172,9 +180,7 @@ def normalize_audio(input_path: str, output_path: str) -> str:
 
 def download_url(url: str, output_path: str) -> str:
     """Download audio from a URL via yt-dlp, then normalize."""
-    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as raw:
-        raw_path = raw.name
-    try:
+    with tempfile.TemporaryDirectory(prefix="typeout_") as tmpdir:
         ydl_opts = {
             "format": "bestaudio/best",
             "postprocessors": [
@@ -184,24 +190,16 @@ def download_url(url: str, output_path: str) -> str:
                     "preferredquality": "192",
                 }
             ],
-            "outtmpl": raw_path[:-4],
+            "outtmpl": os.path.join(tmpdir, "audio.%(ext)s"),
             "quiet": True,
             "no_warnings": True,
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
-
-        # yt-dlp may append to the base name
-        base = raw_path[:-4].split("/")[-1]
-        downloaded = raw_path
-        for f in os.listdir(os.path.dirname(raw_path)):
-            if f.startswith(base) and f.endswith(".wav"):
-                downloaded = os.path.join(os.path.dirname(raw_path), f)
-                break
-        return normalize_audio(downloaded, output_path)
-    finally:
-        if os.path.exists(raw_path):
-            os.remove(raw_path)
+        for name in os.listdir(tmpdir):
+            if name.endswith(".wav"):
+                return normalize_audio(os.path.join(tmpdir, name), output_path)
+    raise RuntimeError("yt-dlp did not produce a wav file")
 
 
 def prepare_audio(input_source: str, input_type: str, output_path: str) -> str:
@@ -395,10 +393,10 @@ def cli(input_source, model, output, no_cache, clear_cache, list_models, check, 
     transcript_cache = cache_dir / "transcripts" / f"{t_key}.txt"
 
     if not no_cache and transcript_cache.exists():
-        text = transcript_cache.read_text()
+        text = transcript_cache.read_text(encoding="utf-8")
         console.print("[dim]cached[/dim]")
         if output:
-            Path(output).write_text(text)
+            _atomic_write_text(Path(output), text)
             console.print(f"[green]Saved:[/green] {output}")
         else:
             print(text)
@@ -408,25 +406,26 @@ def cli(input_source, model, output, no_cache, clear_cache, list_models, check, 
     audio_cache = cache_dir / "audio" / f"{src_key}.wav"
     tmp_audio = None
 
-    if not no_cache and input_type == "url" and audio_cache.exists():
-        console.print("[dim]Using cached audio[/dim]")
-        audio_path = str(audio_cache)
-    else:
-        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
-            tmp_audio = tmp.name
-        audio_path = prepare_audio(input_source, input_type, tmp_audio)
-        if input_type == "url":
-            audio_cache.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(audio_path, audio_cache)
-
     try:
+        if not no_cache and input_type == "url" and audio_cache.exists():
+            console.print("[dim]Using cached audio[/dim]")
+            audio_path = str(audio_cache)
+        else:
+            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+                tmp_audio = tmp.name
+            audio_path = prepare_audio(input_source, input_type, tmp_audio)
+            if input_type == "url":
+                audio_cache.parent.mkdir(parents=True, exist_ok=True)
+                tmp_cache = audio_cache.with_suffix(audio_cache.suffix + ".tmp")
+                shutil.copy2(audio_path, tmp_cache)
+                tmp_cache.replace(audio_cache)
+
         text = transcribe(audio_path, model, lang)
 
-        transcript_cache.parent.mkdir(parents=True, exist_ok=True)
-        transcript_cache.write_text(text)
+        _atomic_write_text(transcript_cache, text)
 
         if output:
-            Path(output).write_text(text)
+            _atomic_write_text(Path(output), text)
             console.print(f"[green]Saved:[/green] {output}")
         else:
             print(text)
