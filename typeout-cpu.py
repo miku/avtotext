@@ -9,7 +9,7 @@
 #     "openai-whisper",
 #     "torch",
 #     "torchaudio",
-#     "transformers>=4.52,!=5.0.*,!=5.1.*",
+#     "transformers>=4.56,!=5.0.*,!=5.1.*,<6",
 #     "soundfile",
 #     "librosa",
 #     "sentencepiece",

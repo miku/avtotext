@@ -8,7 +8,7 @@
 #     "ffmpeg-python",
 #     "openai-whisper",
 #     "nemo_toolkit[asr]>=2.7.2,<2.8",
-#     "transformers>=4.52,!=5.0.*,!=5.1.*",
+#     "transformers>=4.56,!=5.0.*,!=5.1.*,<6",
 #     "soundfile",
 #     "librosa",
 #     "sentencepiece",
