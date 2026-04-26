@@ -26,7 +26,7 @@ set -o pipefail
 # Check for uv
 if ! command -v uv &>/dev/null; then
     echo "error: uv is required but not installed" >&2
-    echo "install: cargo install uv  # or: pip install uv" >&2
+    echo "install: cargo install --locked uv  # or: pip install uv" >&2
     echo "  https://docs.astral.sh/uv/" >&2
     exit 1
 fi

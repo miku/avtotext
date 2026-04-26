@@ -35,7 +35,7 @@ A shortcut to the script can be found at
 
 ```bash
 # Install uv
-cargo install uv  # or: pip install uv
+cargo install --locked uv  # or: pip install uv
 
 # Download typeout
 curl -O https://raw.githubusercontent.com/miku/typeout/refs/heads/main/typeout

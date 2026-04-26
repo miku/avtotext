@@ -7,7 +7,7 @@
 #     "yt-dlp",
 #     "ffmpeg-python",
 #     "openai-whisper",
-#     "nemo_toolkit[asr]",
+#     "nemo_toolkit[asr]>=2.7.2,<2.8",
 #     "transformers>=4.52,!=5.0.*,!=5.1.*",
 #     "soundfile",
 #     "librosa",

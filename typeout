@@ -9,7 +9,7 @@ set -o pipefail
 # Check for uv
 if ! command -v uv &>/dev/null; then
     echo "error: uv is required but not installed" >&2
-    echo "install: cargo install uv  # or: pip install uv" >&2
+    echo "install: cargo install --locked uv  # or: pip install uv" >&2
     echo "  https://docs.astral.sh/uv/" >&2
     exit 1
 fi
@@ -53,6 +53,7 @@ extract_cpu_script() {
     cat > "$1" << 'CPUSCRIPT'
 #!/usr/bin/env -S uv run
 # /// script
+# requires-python = ">=3.12,<3.14"
 # dependencies = [
 #     "click",
 #     "rich",
@@ -505,7 +506,7 @@ extract_gpu_script() {
 #     "yt-dlp",
 #     "ffmpeg-python",
 #     "openai-whisper",
-#     "nemo_toolkit[asr]",
+#     "nemo_toolkit[asr]>=2.7.2,<2.8",
 #     "transformers>=4.52,!=5.0.*,!=5.1.*",
 #     "soundfile",
 #     "librosa",

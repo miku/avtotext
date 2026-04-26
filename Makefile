@@ -7,7 +7,7 @@ TYPEOUT_GPU = typeout-gpu.py
 
 all: $(TYPEOUT)
 
-$(TYPEOUT): $(TYPEOUT_CPU) $(TYPEOUT_GPU)
+$(TYPEOUT): build.sh $(TYPEOUT_CPU) $(TYPEOUT_GPU)
 	VERSION=$(VERSION) ./build.sh
 
 clean:

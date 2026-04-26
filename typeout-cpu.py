@@ -1,5 +1,6 @@
 #!/usr/bin/env -S uv run
 # /// script
+# requires-python = ">=3.12,<3.14"
 # dependencies = [
 #     "click",
 #     "rich",
